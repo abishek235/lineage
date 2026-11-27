@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Tree · Lineage",
+      "hasCanvas": false,
+      "bodyTextLen": 140,
+      "bodyTextHash": "77b5a868762b2beb25c2e1569aeb48830711cdc75d01bf31de627bd9f9dc46b4",
+      "bodyTextPrefix": "Skip to content Lineage வம்சம் Tree Directory Kinship Events Rec",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Tree · Lineage",
+      "hasCanvas": false,
+      "bodyTextLen": 140,
+      "bodyTextHash": "cbc5a9453e1a54ed5cf03357e7621722d56fd9d83fee5a863371d3bbcbafe96b",
+      "bodyTextPrefix": "Skip to content Lineage வம்சம் Record Add person React Flow 14 p",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

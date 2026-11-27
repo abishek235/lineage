@@ -1,0 +1,191 @@
+# Project Specification: Family Heritage & Tree Application
+
+## 1. Project Overview
+A self-hosted family tree, directory, and cultural heritage Progressive Web App (PWA) built to visualize family lineages, compute core relationships, store multi-entry contact details, track multi-honoree cultural milestones, attach snapshot photos to people, weddings, and events, and send automated SMTP email reminders.
+
+- **Deployment Phases 1–4:** Single Docker container deployed on CasaOS (via Docker Compose) backed by SQLite and persistent host volumes.
+- **Deployment Phase 5 (Web & Mobile PWA):** Multi-user web app with Sign in with Google, invite-only family access, and iOS/Android "Add to Home Screen" PWA support.
+
+---
+
+## 2. Tech Stack
+- **Framework:** Next.js (App Router), React, TypeScript, Tailwind CSS
+- **Authentication (Phase 5):** Better Auth (or Auth.js) with Prisma adapter supporting Google OAuth and optional local/LAN fallback
+- **PWA Support (Phase 5):** Web App Manifest (`app/manifest.ts`) + lightweight pass-through Service Worker (no aggressive API caching) for iOS/Android home-screen installation
+- **Family Tree Visualization:** `@xyflow/react` (React Flow) combined with `dagre` for automatic top-to-bottom hierarchical layout
+- **Backend & ORM:** Next.js API Routes + Prisma ORM
+- **Database:** SQLite (`/app/data/family.db` in production, `./prisma/dev.db` locally)
+- **File Storage:** Local disk (`/app/uploads`, outside `/public`) served via `/api/uploads/[filename]` (plain file storage with size/type validation — no native image-processing libraries like `sharp`)
+- **Email & Scheduling:** `nodemailer` (SMTP) + `node-cron` initialized once via `src/instrumentation.ts` (daily check at 08:00 server time)
+- **Backup & Restore:** `archiver` + `unzipper` (full JSON + `/uploads` ZIP archive export and restore)
+
+---
+
+## 3. Database Schema (Prisma)
+
+Define the following models in `prisma/schema.prisma`:
+
+### Core Family & Directory Models
+- **`Person`:**
+  - `id`: String (UUID, Primary Key)
+  - `firstName`: String
+  - `lastName`: String
+  - `maidenName`: String (optional)
+  - `gender`: String (`MALE`, `FEMALE`, `OTHER`)
+  - `birthDate`: DateTime (optional)
+  - `birthYearOnly`: Boolean (default `false` — for older relatives when only the birth year is known)
+  - `deathDate`: DateTime (optional)
+  - `bio`: Text (optional)
+  - `createdAt`: DateTime (default `now()`)
+  - `updatedAt`: DateTime (`@updatedAt`)
+- **`ContactInfo`:**
+  - `id`: String (UUID, Primary Key)
+  - `personId`: String (Foreign Key -> `Person.id`, `onDelete: Cascade`)
+  - `type`: String (`EMAIL`, `PHONE`, `ADDRESS`)
+  - `label`: String (e.g., `"Mobile"`, `"Home"`, `"Work"`, `"India Residence"`)
+  - `value`: Text (email address, phone number, or multi-line mailing address)
+  - `isPrimary`: Boolean (default `false`)
+  - `createdAt`: DateTime (default `now()`)
+- **`ParentChild`:**
+  - `id`: String (UUID, Primary Key)
+  - `parentId`: String (Foreign Key -> `Person.id`, `onDelete: Cascade`)
+  - `childId`: String (Foreign Key -> `Person.id`, `onDelete: Cascade`)
+  - `type`: String (`BIOLOGICAL`, `ADOPTED`, `STEP` — default `BIOLOGICAL`)
+  - Constraint: `@@unique([parentId, childId])` and validate `parentId !== childId` in API.
+- **`Union`:**
+  - `id`: String (UUID, Primary Key)
+  - `partner1Id`: String (Foreign Key -> `Person.id`, `onDelete: Cascade`)
+  - `partner2Id`: String (Foreign Key -> `Person.id`, `onDelete: Cascade`)
+  - `status`: String (`MARRIED`, `DIVORCED`, `WIDOWED`, `PARTNER` — default `MARRIED`)
+  - `startDate`: DateTime (optional — Wedding Anniversary)
+  - `endDate`: DateTime (optional)
+  - Constraint: Normalize `partner1Id < partner2Id` lexicographically on write and enforce `@@unique([partner1Id, partner2Id])`.
+
+### Cultural Events, Photos & Settings Models
+- **`CulturalEvent`:**
+  - `id`: String (UUID, Primary Key)
+  - `title`: String (e.g., `"Sashtiabdapoorthi"`, `"Upanayanam"`, `"Ayushya Homam"`, `"Baptism"`, `"Graduation"`)
+  - `category`: String (`TAMIL_RITUAL`, `MILESTONE`, `RELIGIOUS`, `ACADEMIC`, `CUSTOM`)
+  - `eventDate`: DateTime
+  - `location`: String (optional)
+  - `description`: Text (optional)
+  - `isAnnualRecurring`: Boolean (default `false` — `true` for recurring memorials or annual observances)
+  - `notifyDaysBefore`: Int (default `30`; `-1` disables alerts)
+  - `unionId`: String (optional — Foreign Key -> `Union.id`, `onDelete: SetNull`)
+- **`EventHonoree`:**
+  - `id`: String (UUID, Primary Key)
+  - `eventId`: String (Foreign Key -> `CulturalEvent.id`, `onDelete: Cascade`)
+  - `personId`: String (Foreign Key -> `Person.id`, `onDelete: Cascade`)
+  - Constraint: `@@unique([eventId, personId])` — allows tagging multiple co-honorees (e.g., husband and wife for *Sashtiabdapoorthi*, or two brothers for *Upanayanam*).
+- **`Photo`:**
+  - `id`: String (UUID, Primary Key)
+  - `filePath`: String (filename stored in `/app/uploads`)
+  - `caption`: String (optional)
+  - `isPrimary`: Boolean (default `false` — when set `true` for a person's photo, reset other photos for that `personId` to `false`)
+  - `personId`: String (optional — Foreign Key -> `Person.id`, `onDelete: Cascade`)
+  - `unionId`: String (optional — Foreign Key -> `Union.id`, `onDelete: Cascade`)
+  - `eventId`: String (optional — Foreign Key -> `CulturalEvent.id`, `onDelete: Cascade`)
+  - `createdAt`: DateTime (default `now()`)
+  - Rule: Enforce a soft limit of up to **5 photos** per Person, Union, or Event.
+- **`AppSetting`:**
+  - `key`: String (Primary Key)
+  - `value`: String (JSON-encoded SMTP and notification settings)
+
+### Authentication & Access Models (Phase 5)
+- **`User`:** `id` (UUID), `name`, `email` (unique), `image`, `role` (`ADMIN`, `EDITOR`, `VIEWER` — first registered user automatically becomes `ADMIN`), `linkedPersonId` (optional -> `Person.id`), `createdAt`, `updatedAt`.
+- **`Account` & `Session`:** Standard OAuth provider linkage (`google`) and database session tables required by the auth library.
+- **`AllowedEmail`:** `id` (UUID), `email` (unique), `role` (`EDITOR`, `VIEWER`), `invitedBy` (String) — invite allowlist so unauthorized users cannot access private family data.
+
+---
+
+## 4. Core Functional Requirements
+
+### A. Interactive Family Tree, Directory & Simple Relationship Finder
+- **Visual Tree Canvas:** Render people as interactive cards displaying primary identification photo, full name, and birth/death years. Connect spouses via union nodes and children via directed edges using `dagre` top-to-bottom layout.
+- **Family Directory & Contact Cards:** Searchable family directory and profile view displaying DOB (supporting full date or year-only), bio, and multiple labeled emails, phone numbers, and physical addresses (`ContactInfo`) with primary badges and one-click copy/`mailto:`/`tel:` actions.
+- **"How Are We Related?" Explorer (Core Kinship & Path):**
+  - Select `Person A` and `Person B` to find the shortest path between them across `ParentChild` and `Union` links using Breadth-First Search (BFS).
+  - Label standard core relationships directly (`Parent`, `Child`, `Spouse`, `Sibling`, `Grandparent`, `Grandchild`, `Great-Grandparent`, `Great-Grandchild`, `Aunt/Uncle`, `Niece/Nephew`, `First Cousin`, `Parent-in-Law`, `Child-in-Law`, `Sibling-in-Law`).
+  - For more distant branches, display `"Extended Relative"` alongside a clear step-by-step visual breadcrumb chain (e.g., `Person A → Father → Sister → Son → Person B`).
+
+### B. Cultural Events, Joint Honorees & Life Timeline
+- **Multi-Honoree Tagging:** Tag one or more people as honorees on a single `CulturalEvent` (e.g., both Husband and Wife for *Sashtiabdapoorthi*, or two siblings for a joint *Upanayanam* or *Baptism*). Show the shared event on every tagged honoree's personal Life Timeline without duplicating records.
+- **Cultural Presets:** Include quick-select chips for `Sashtiabdapoorthi`, `Bhimaratha Shanthi`, `Sathabhishekam`, `Ayushya Homam`, `Upanayanam`, `Baptism`, `Graduation`, `Housewarming`, `Shraddha / Memorial`, and `Custom`.
+- **Dashboard Upcoming View:** Display upcoming Birthdays (highlighting milestone ages like `1`, `16`, `18`, `25`, `50`, `60`, `70`, `80` with a badge), Wedding Anniversaries, and scheduled/annual `CulturalEvents` over the next 60 days.
+- **Person Life Timeline:** Render a vertical chronological timeline inside every person's profile combining their Birth, Cultural Events, Marriages, and Death.
+
+### C. Snapshot Photos (People, Weddings & Events)
+- Allow uploading up to **5 photos** (`JPEG`, `PNG`, `WEBP`, max 5 MB each) each on a **Person** (for identification across ages), a **Union** (wedding photos), and a **CulturalEvent** (ceremony snapshots).
+- Store files in `/app/uploads` (outside `/public`), serve via `/api/uploads/[filename]` (with path-traversal protection), allow clicking any photo for a full-size lightbox preview, delete individual photos, and toggle **"Set as Primary"** (`isPrimary = true`) on a person's photo.
+
+### D. SMTP Email Notifications
+- Provide a **Settings** page to configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, and a comma-separated list of recipient email addresses, plus a **"Send Test Email"** button.
+- Initialize `node-cron` once in `src/instrumentation.ts` (guarded with `globalThis`) to run daily at `08:00`, sending email reminders for upcoming Birthdays, Union Anniversaries, and `CulturalEvents` matching `notifyDaysBefore`.
+
+### E. Full Backup & Restore (.zip)
+- **Export Backup:** Generate and download a `.zip` archive containing `database.json` (all database tables serialized) and the entire `/app/uploads` directory.
+- **Restore Backup:** Upload a previously exported `.zip` archive, validate `database.json`, restore all records inside a Prisma transaction, and restore files into `/app/uploads`.
+
+### F. Google Sign-In, Invite Allowlist & Mobile PWA (Phase 5)
+- **Google OAuth Sign-In:** Render **"Continue with Google"** conditionally when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set, keeping an open/local mode when running LAN-only on CasaOS without OAuth configured.
+- **Invite-Only Allowlist:** First user to sign in becomes `ADMIN`. Subsequent users must match an email in `AllowedEmail` (managed in Settings) to prevent unauthorized sign-ups.
+- **Mobile PWA:** Configure `manifest.ts`, Apple touch icons, viewport meta tags, and mobile-friendly touch gestures on the family tree canvas so family members can tap **"Add to Home Screen"** on iOS and Android without stale API caching issues.
+
+---
+
+## 5. UI/UX, Pastel Themes & Minimalist Design Principles
+- **Tried-and-Tested Design Foundations:**
+  - **60-30-10 Color Hierarchy:** 60% calm neutral canvas, 30% crisp white elevated cards with subtle `1px` hairline borders, and 10% muted pastel accent for primary buttons, active states, and milestone highlights.
+  - **High-Contrast Readability:** Pair soft pastel surfaces with deep charcoal typography (`#1E293B` primary, `#64748B` secondary) to maintain WCAG AA legibility across all views.
+  - **8pt Spacing Grid & Clean Hierarchy:** Consistent spacing rhythm, soft rounded corners (`rounded-xl` cards, `rounded-lg` inputs), and generous whitespace so screens never feel crowded.
+- **Curated Pastel Theme Options (CSS Variables + `localStorage`):**
+  - Provide an instant theme switcher in the header/Settings toggling a `data-theme` attribute on `<html>` with 4 refined pastel palettes:
+    1. **Warm Sage (Default):** Warm alabaster canvas (`#FAF9F6`) with muted sage green accents (`#5F8575` / `#E8F0EC`).
+    2. **Dusty Rose & Sand:** Soft cream canvas (`#FBF8F6`) with muted terracotta-rose accents (`#B86B77` / `#F7E9EC`).
+    3. **Periwinkle Mist:** Airy snow canvas (`#F7F9FC`) with soft periwinkle-blue accents (`#5B7BA6` / `#E7EEF8`).
+    4. **Lavender Dusk:** Pearl canvas (`#F9F8FB`) with muted lavender accents (`#7C6A9A` / `#EFEBF6`).
+- **High Scannability & Effortless Workflows:** Display only essential details on summary cards, use focused slide-over drawers or modals for create/edit actions, provide instant search/filter pickers, and keep a single clear primary action per screen.
+- **Subtle, Purposeful Motion:** Use lightweight CSS/Tailwind transitions (`150ms–250ms` ease-out) for slide-over drawers, modals, photo lightboxes, tab switches, and card hover states. Use smooth camera gliding (`fitView` duration) when focusing nodes on the family tree, smoothly dim non-matching nodes when highlighting a relationship path, and respect `prefers-reduced-motion`.
+- **Responsive & Touch-Friendly:** Ensure layouts adapt cleanly to mobile screens with comfortable tap targets and intuitive tree pan/zoom controls.
+
+---
+
+## 6. Docker & CasaOS Deployment
+- **Dockerfile:** Multi-stage `node:20-bookworm-slim` build compiling Next.js (`output: "standalone"`), generating the Prisma client, and running `npx prisma migrate deploy` via `entrypoint.sh` before starting the server.
+- **docker-compose.yml:**
+  - Service name: `family-tree`
+  - Port mapping: `3000:3000`
+  - Environment variables: `DATABASE_URL="file:/app/data/family.db"`, `UPLOADS_DIR="/app/uploads"`, plus optional `AUTH_SECRET`, `AUTH_URL`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`
+  - Persistent volumes: `./data:/app/data` and `./uploads:/app/uploads`
+  - Restart policy: `unless-stopped`, cleanly formatted for CasaOS **App Store -> Custom Install -> Import Docker Compose**.
+
+---
+
+## 7. Phased Implementation Plan (Strict Execution Order)
+
+- **Phase 1 — Foundation, Directory, Tree & Simple Relationship Finder:**
+  - Initialize Next.js (TypeScript + Tailwind) and Prisma with SQLite.
+  - Set up the 4 pastel themes (CSS variables + `localStorage` switcher), minimalist layout shell, and smooth CSS transitions.
+  - Build CRUD APIs and UI for People, multi-entry ContactInfo (email, phone, address), Parent-Child links, and Unions.
+  - Render the interactive React Flow + `dagre` family tree and implement the core kinship + visual breadcrumb "How Are We Related?" calculator.
+  - *Stop and verify before Phase 2.*
+
+- **Phase 2 — Snapshot Photos (People & Weddings):**
+  - Implement local file upload API (`/app/uploads`) and `/api/uploads/[filename]` static file route.
+  - Allow uploading up to 5 photos on Person profiles (with `isPrimary` avatar selection) and Union/Wedding detail views, plus a simple lightbox preview and delete button.
+  - *Stop and verify before Phase 3.*
+
+- **Phase 3 — Cultural Events, Event Photos, Life Timeline & SMTP Alerts:**
+  - Build `CulturalEvent` and `EventHonoree` APIs supporting multiple co-honorees and up to 5 attached ceremony photos.
+  - Build the Life Timeline view on Person profiles, cultural preset chips, and the Dashboard Upcoming Birthdays/Anniversaries/Events widget.
+  - Build the SMTP Settings UI, "Send Test Email" endpoint, and `src/instrumentation.ts` + `node-cron` daily reminder service.
+  - *Stop and verify before Phase 4.*
+
+- **Phase 4 — ZIP Backup/Restore & CasaOS Docker Packaging:**
+  - Implement full JSON + Media `.zip` backup export and restore.
+  - Create `Dockerfile`, `entrypoint.sh`, and `docker-compose.yml`, and verify clean container startup with persistent volumes on CasaOS.
+  - *Stop and verify before Phase 5.*
+
+- **Phase 5 — Google Sign-In, Invite Allowlist & Mobile PWA:**
+  - Integrate Google OAuth sign-in, session protection middleware, and the `AllowedEmail` family invite manager in Settings.
+  - Configure PWA manifest, home-screen icons, and mobile touch optimization for iOS/Android Safari and Chrome.

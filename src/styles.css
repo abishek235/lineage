@@ -1,0 +1,351 @@
+@import url("https://fonts.googleapis.com/css2?family=Catamaran:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Catamaran", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-strong: var(--accent-strong);
+  --color-on-accent: var(--on-accent);
+  --color-line: var(--line);
+  --color-gold: var(--gold);
+}
+
+:root,
+[data-theme="sage"] {
+  --canvas: #f7f3ea;
+  --surface: #fffdf8;
+  --ink: #2a241c;
+  --muted: #6f6558;
+  --accent: #3f6b52;
+  --accent-soft: #e7f0e4;
+  --accent-strong: #2c5340;
+  --on-accent: #fffdf8;
+  --line: #e6dccb;
+  --edge: #3f6b52;
+  --gold: #7a5614;
+  --kolam: #d2be96;
+  --veil: #1a161275;
+}
+
+[data-theme="rose"] {
+  --canvas: #faf3ee;
+  --surface: #fffdf8;
+  --ink: #2a241c;
+  --muted: #6f6558;
+  --accent: #a33b45;
+  --accent-soft: #f8e6e4;
+  --accent-strong: #7d2c36;
+  --on-accent: #fffdf8;
+  --line: #eadfd4;
+  --edge: #a33b45;
+}
+
+[data-theme="mist"] {
+  --canvas: #f4f2ec;
+  --surface: #fffdf8;
+  --ink: #2a241c;
+  --muted: #6f6558;
+  --accent: #2f4d7a;
+  --accent-soft: #e6ebf4;
+  --accent-strong: #243c62;
+  --on-accent: #fffdf8;
+  --line: #e3ddd3;
+  --edge: #2f4d7a;
+}
+
+[data-theme="dusk"] {
+  --canvas: #f6f1ee;
+  --surface: #fffdf8;
+  --ink: #2a241c;
+  --muted: #6f6558;
+  --accent: #6d4e78;
+  --accent-soft: #f0e8f2;
+  --accent-strong: #533c5e;
+  --on-accent: #fffdf8;
+  --line: #e6ddd2;
+  --edge: #6d4e78;
+}
+
+[data-mode="dark"] {
+  --canvas: #141311;
+  --surface: #1e1b17;
+  --ink: #f6f1e6;
+  --muted: #b4a898;
+  --line: #322e28;
+  --gold: #e4c27a;
+  --kolam: #4a4338;
+  --veil: #0000009e;
+}
+
+[data-theme="sage"][data-mode="dark"] {
+  --accent: #8fbfa0;
+  --accent-soft: #243028;
+  --accent-strong: #d5eadc;
+  --on-accent: #122018;
+  --edge: #8fbfa0;
+}
+
+[data-theme="rose"][data-mode="dark"] {
+  --accent: #e7a8ab;
+  --accent-soft: #3a2426;
+  --accent-strong: #f3d0d2;
+  --on-accent: #2a1416;
+  --edge: #e7a8ab;
+}
+
+[data-theme="mist"][data-mode="dark"] {
+  --accent: #a9c0e4;
+  --accent-soft: #222a3a;
+  --accent-strong: #d5e2f6;
+  --on-accent: #121820;
+  --edge: #a9c0e4;
+}
+
+[data-theme="dusk"][data-mode="dark"] {
+  --accent: #cbb4d8;
+  --accent-soft: #322838;
+  --accent-strong: #eadcf2;
+  --on-accent: #1c1420;
+  --edge: #cbb4d8;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html[data-mode="dark"] {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--canvas);
+    background-image:
+      radial-gradient(circle, var(--kolam) 1px, transparent 1.15px),
+      radial-gradient(circle, var(--kolam) 0.65px, transparent 0.8px);
+    background-position: 0 0, 14px 14px;
+    background-size: 28px 28px, 28px 28px;
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  input[type="checkbox"] {
+    accent-color: var(--accent-strong);
+    width: 1rem;
+    height: 1rem;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+}
+
+.bg-swatch-sage {
+  background-color: #3f6b52;
+}
+.bg-swatch-rose {
+  background-color: #a33b45;
+}
+.bg-swatch-mist {
+  background-color: #2f4d7a;
+}
+.bg-swatch-dusk {
+  background-color: #6d4e78;
+}
+
+.kolam-ground {
+  background-image:
+    radial-gradient(circle, var(--kolam) 1px, transparent 1.15px),
+    radial-gradient(circle, var(--kolam) 0.65px, transparent 0.8px);
+  background-position: 0 0, 14px 14px;
+  background-size: 28px 28px, 28px 28px;
+}
+
+.silk-edge {
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--gold) 65%, transparent);
+}
+
+.silk-edge-top {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gold) 65%, transparent);
+}
+
+.silk-card {
+  border-top: 2px solid var(--gold);
+}
+
+.modal-overlay {
+  z-index: 80;
+  background: var(--veil);
+}
+
+.modal-panel {
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  border-radius: 0;
+  inset: 0;
+  overflow: hidden;
+  animation: fade-in 0.16s ease-out both;
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  margin-top: 1rem;
+  overflow-y: auto;
+}
+
+@media (width >= 640px) {
+  .modal-panel {
+    width: min(32rem, 100vw - 2rem);
+    height: auto;
+    max-height: min(85dvh, 44rem);
+    padding: 1.5rem;
+    border-radius: 0.875rem;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade {
+  animation: fade-in 0.2s ease-out both;
+}
+
+.lightbox {
+  position: fixed;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: var(--veil);
+  inset: 0;
+}
+
+.lightbox img {
+  max-width: min(100%, 64rem);
+  max-height: min(85dvh, 52rem);
+  border-radius: 0.875rem;
+  background: var(--surface);
+}
+
+.lineage-flow {
+  --xy-background-color: transparent;
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(circle, var(--kolam) 1px, transparent 1.15px),
+    radial-gradient(circle, var(--kolam) 0.65px, transparent 0.8px);
+  background-position: 0 0, 14px 14px;
+  background-size: 28px 28px, 28px 28px;
+}
+
+.lineage-flow .react-flow__node-person,
+.lineage-flow .react-flow__node-union {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+.lineage-flow .react-flow__node-person {
+  cursor: pointer;
+}
+
+.lineage-flow .react-flow__node-person:hover .person-card {
+  border-color: var(--accent);
+  border-top-color: var(--gold);
+}
+
+.lineage-flow .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  box-shadow: none;
+}
+
+.lineage-flow .react-flow__controls-button {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  fill: var(--ink);
+}
+
+.lineage-flow .react-flow__controls-button:hover {
+  background: var(--accent-soft);
+}
+
+.lineage-flow .react-flow__attribution {
+  margin: 0 0.5rem 3.25rem 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.lineage-flow .react-flow__handle {
+  pointer-events: none;
+  opacity: 0;
+}
+
+@media (max-width: 639px) {
+  .auth-slot > div > span.text-sm.font-medium:not(.grid) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

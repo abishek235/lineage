@@ -1,0 +1,41 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Tree · Lineage",
+      "hasCanvas": false,
+      "bodyTextLen": 471,
+      "bodyTextHash": "09aa8d20ebf66ca334f8bde56249e4f7aec0ecb4ebd9e35e9d93a1342a31b58a",
+      "bodyTextPrefix": "Skip to content Lineage வம்சம் Tree Directory Kinship Events Sig",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Tree · Lineage",
+      "hasCanvas": false,
+      "bodyTextLen": 471,
+      "bodyTextHash": "720576ebeadca700dba1f9d216ea1189275f7e1efde240dd3da24cbcadbee59b",
+      "bodyTextPrefix": "Skip to content Lineage வம்சம் Sign in Record Add person VI Venk",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": true,
+  "baselineReasons": [
+    "desktop: body text changed (140 -> 471 chars, hash mismatch)",
+    "mobile: body text changed (140 -> 471 chars, hash mismatch)"
+  ]
+}

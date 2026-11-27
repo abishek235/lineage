@@ -1,0 +1,22 @@
+# ReCasaOS / CasaOS: App Store → Custom Install → Import Docker Compose.
+# Before the first start, set BETTER_AUTH_SECRET and BETTER_AUTH_URL.
+# BETTER_AUTH_URL must be the exact address you open in the browser,
+# for example http://192.168.1.20:3000
+services:
+  family-tree:
+    build: .
+    image: ${LINEAGE_IMAGE:-lineage:local}
+    ports:
+      - "3000:3000"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3000"
+      PGLITE_DATA_DIR: /app/data
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-replace-with-a-long-random-string}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://127.0.0.1:3000}
+    volumes:
+      - lineage-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  lineage-data:
